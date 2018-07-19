@@ -1,0 +1,134 @@
+/**
+ * Copyright (c) 2018 emekoi
+ *
+ * This library is free software; you can redistribute it and/or modify it
+ * under the terms of the MIT license. See LICENSE for details.
+ */
+
+
+#pragma once
+
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include "wren.h"
+#include "lib/map/map.h"
+
+typedef map_t(WrenForeignMethodFn) WrenForeignMethodFn_Map;
+typedef map_t(WrenForeignClassMethods) WrenForeignClassMethods_Map;
+
+typedef struct {
+  WrenForeignMethodFn_Map methods;
+  WrenForeignClassMethods_Map classes;
+  map_str_t builtins;
+} ForeignWrenData;
+
+#define ASSERT(x)\
+  do {\
+    if (!(x)) {\
+      fprintf(stderr, "%s:%d: %s(): assertion '%s' failed\n",\
+              __FILE__, __LINE__, __func__, #x);\
+      abort();\
+    }\
+  } while (false)
+
+#define DEBUG() do {\
+  fprintf(stdout, "[TRACE]: %s:%d %s(): %d\n", __FILE__, __LINE__, __func__); \
+} while (false)
+
+#define TRACE(...) do { \
+  fprintf(stdout, "[TRACE]: %s:%d %s(): ", __FILE__, __LINE__, __func__); \
+  fprintf(stdout, __VA_ARGS__); \
+  fprintf(stdout, "\n"); \
+} while(false);
+
+#define UNUSED(x)       ((void) (x))
+#define MIN(a, b)       ((b) < (a) ? (b) : (a))
+#define MAX(a, b)       ((b) > (a) ? (b) : (a))
+#define CLAMP(x, a, b)  (MAX(a, MIN(x, b)))
+#define LERP(a, b, p)   ((a) + ((b) - (a)) * (p))
+
+#define wrenGetMethodMap(vm) &(((ForeignWrenData*)wrenGetUserData(vm))->methods)
+#define wrenGetClassMap(vm) &(((ForeignWrenData*)wrenGetUserData(vm))->classes)
+#define wrenGetBuiltins(vm) &(((ForeignWrenData*)wrenGetUserData(vm))->builtins)
+
+static inline void wrenError(WrenVM* vm, const char *str, ...) {
+  va_list arg, tmp;
+  char *msg = NULL;
+  int32_t len;
+  if (str == NULL) return;
+  va_start(arg, str);
+  /* create a copy of the list of args */
+  __va_copy(tmp, arg);
+  /* get length string should be */
+  len = vsnprintf(msg, 0, str, tmp);
+  /* toss temp copy */
+  va_end(tmp);
+  /* something is wrong... */
+  if (len < 0) return;
+  /* resize the string */
+  msg = calloc(len + 1, sizeof(char));
+  /* format the string string in msg */
+  vsnprintf(msg, len + 1, str, arg);
+  /* toss args */
+  va_end(arg);
+  wrenSetSlotBytes(vm, 0, msg, len + 1);
+  free(msg);
+  wrenAbortFiber(vm, 0);
+}
+
+static inline void wrenCheckSlot(WrenVM *vm, size_t slot, size_t type, const char *msg) {
+  wrenEnsureSlots(vm, slot + 1);
+  if (wrenGetSlotType(vm, slot) != type) {
+    wrenError(vm, msg);
+  }
+}
+
+static inline void wrenSetSlotBoolOpt(WrenVM *vm, int32_t slot, bool value) {
+  if (wrenGetSlotType(vm, slot) != WREN_TYPE_BOOL) {
+    wrenSetSlotBool(vm, slot, value);
+  }
+}
+
+static inline void wrenSetSlotDoubleOpt(WrenVM *vm, int32_t slot, double value) {
+  if (wrenGetSlotType(vm, slot) != WREN_TYPE_NUM) {
+    wrenSetSlotDouble(vm, slot, value);
+  }
+}
+
+static inline void wrenSetSlotStringOpt(WrenVM *vm, int32_t slot, const char *text) {
+  if (wrenGetSlotType(vm, slot) != WREN_TYPE_STRING) {
+    wrenSetSlotString(vm, slot, text);
+  }
+}
+
+static inline void wrenSetSlotStringFormat(WrenVM* vm, int32_t slot, const char *str, ...) {
+  va_list arg, tmp;
+  char *msg = NULL;
+  int32_t len;
+  if (str == NULL) return;
+  va_start(arg, str);
+  /* create a copy of the list of args */
+  __va_copy(tmp, arg);
+  /* get length string should be */
+  len = vsnprintf(msg, 0, str, tmp);
+  /* toss temp copy */
+  va_end(tmp);
+  /* something is wrong... */
+  if (len < 0) return;
+  /* resize the string */
+  msg = calloc(len + 1, sizeof(char));
+  /* format the string string in msg */
+  vsnprintf(msg, len + 1, str, arg);
+  /* toss args */
+  va_end(arg);
+  wrenSetSlotBytes(vm, slot, msg, len + 1);
+  free(msg);
+}
+
+static inline void wrenSetSlotBytesOpt(WrenVM* vm, int32_t slot, const char *bytes, size_t length) {
+  if (wrenGetSlotType(vm, slot) != WREN_TYPE_STRING) {
+    wrenSetSlotBytes(vm, slot, bytes, length);
+  }
+}
