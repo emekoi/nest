@@ -11,6 +11,7 @@ INCLUDE_PATH = [
   "wren/src/optional",
   "wren/src/include",
   "wren/src/vm",
+  "src/lib",
   "src",
 ]
 SOURCE = [
@@ -28,7 +29,7 @@ EXTRA = [  ]
 if platform.system() == "Windows":
   sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
   OUTPUT += ".exe"
-  LINK += [ "mingw32" ]
+  LINK += [ "mingw32", "ws2_32" ]
 
 def fmt(fmt, dic):
   for k in dic:

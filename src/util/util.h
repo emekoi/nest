@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "wren.h"
-#include "lib/map/map.h"
+#include "map/map.h"
 
 typedef map_t(WrenForeignMethodFn) WrenForeignMethodFn_Map;
 typedef map_t(WrenForeignClassMethods) WrenForeignClassMethods_Map;
